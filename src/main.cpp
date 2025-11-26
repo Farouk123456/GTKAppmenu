@@ -488,7 +488,9 @@ class Win : public Gtk::Window
             // Event controller for click
             auto click = Gtk::GestureClick::create();
             click->signal_released().connect([this, app](int, double, double) {
-                std::cout << (app.execCmd) << std::endl;
+                std::thread([app]() {
+                    std::system((app.execCmd + " &").c_str());
+                }).detach();
                 this->get_application()->quit();
             });
             box->add_controller(click);
