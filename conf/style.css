@@ -1,3 +1,8 @@
 window {
-    background: #0ff0000f;
+    background: #181818d0;
+}
+
+.app:hover {
+    background: #ffffff0f;
+    border-radius: 25px;
 }

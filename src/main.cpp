@@ -66,7 +66,7 @@ void check_conf_dir()
 {
     if (!std::filesystem::exists(Glib::get_home_dir() + "/.config/GTKAppmenu"))
     {
-        std::cout << "\n~/.config/GTKAppmenu doesn't exist.\ncreate it and move conf and imgs directories into it\nto use this Programm without the project files i.e. executable only\n"<< std::endl;
+        std::cout << "\n~/.config/GTKAppmenu doesn't exist.\ncreate it and move conf directory into it\nto use this Programm without the project files i.e. executable only\n"<< std::endl;
     }
 
     if(!std::filesystem::exists("./conf") && !std::filesystem::exists(Glib::get_home_dir() + "/.config/GTKAppmenu/conf"))
@@ -102,8 +102,6 @@ std::string to_lower(const std::string& s) {
 
 struct AppEntry
 {
-    int count_instances = 0;
-    bool isPinned = false;
     std::string name = "";
     std::string execCmd = "";
     std::string iconPath = "";
@@ -405,10 +403,99 @@ class Win : public Gtk::Window
             buildWindow();
         }
     private:
+        Gtk::Entry* searchEntry = nullptr;
+        Gtk::FlowBox* flow = nullptr;
+
         void buildWindow()
         {
+            // Main vertical layout: Search bar + scroll area
+            auto vbox = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL, 4);
+            vbox->set_margin(10);
+            vbox->set_margin_start(300);
+            vbox->set_margin_end(300);
 
+            // --- SEARCH BAR ---
+            searchEntry = Gtk::make_managed<Gtk::Entry>();
+            searchEntry->set_placeholder_text("Search applications…");
+            vbox->append(*searchEntry);
+
+            // Scroll container
+            auto scroller = Gtk::make_managed<Gtk::ScrolledWindow>();
+            scroller->set_policy(Gtk::PolicyType::AUTOMATIC, Gtk::PolicyType::AUTOMATIC);
+            scroller->set_hexpand(true);
+            scroller->set_vexpand(true);
+            vbox->append(*scroller);
+
+            // FlowBox for dynamic grid
+            flow = Gtk::make_managed<Gtk::FlowBox>();
+            flow->set_selection_mode(Gtk::SelectionMode::NONE);
+            flow->set_valign(Gtk::Align::START);
+            //flow->set_halign(Gtk::Align::START);
+            flow->set_column_spacing(20);
+            flow->set_row_spacing(20);
+            flow->set_margin(20);
+
+            scroller->set_child(*flow);
+
+            // Fill initial display
+            rebuildFlow("");
+
+            // Search updates
+            searchEntry->signal_changed().connect([this]() {
+                rebuildFlow(searchEntry->get_text());
+            });
+
+            this->set_child(*vbox);
         }
+
+    void rebuildFlow(const std::string& query)
+    {
+        flow->remove_all();
+
+        for (const auto& app : apps)
+        {
+            if (!query.empty())
+            {
+                if (!find_case_insensitive(app.name, query))
+                    continue;
+            }
+
+            // Icon
+            Gtk::Image* img = nullptr;
+            try { img = Gtk::make_managed<Gtk::Image>(app.iconPath); }
+            catch (...) { img = Gtk::make_managed<Gtk::Image>(); }
+            img->set_pixel_size(48);
+
+            // Label
+            auto lbl = Gtk::make_managed<Gtk::Label>(app.name);
+            lbl->set_ellipsize(Pango::EllipsizeMode::END);
+            lbl->set_lines(2);
+            lbl->set_max_width_chars(10);
+            lbl->set_justify(Gtk::Justification::CENTER);
+            
+            auto b = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL, 4);
+            b->append(*img);
+            b->append(*lbl);
+            b->set_margin(10);
+
+            auto box = Gtk::make_managed<Gtk::CenterBox>();
+            box->set_size_request(100,100);
+            box->set_orientation(Gtk::Orientation::VERTICAL);
+            box->add_css_class("app");
+            
+            box->set_center_widget(*b);
+            
+            // Event controller for click
+            auto click = Gtk::GestureClick::create();
+            click->signal_released().connect([this, app](int, double, double) {
+                std::cout << (app.execCmd) << std::endl;
+                this->get_application()->quit();
+            });
+            box->add_controller(click);
+
+            flow->append(*box);
+        }
+    }
 };
 
 int main(int argc, char **argv)
