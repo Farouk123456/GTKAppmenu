@@ -4,6 +4,10 @@ GTKAppmenu is a GTKmm4 based Application Launcer Menu built for speed because [n
 
 its built for and tested in hyprland but it should work for all gtk-layer-shell supporting wayland Window Managers.
 
+<p>
+  <img width="1920" height="1080" alt="Image" src="https://github.com/user-attachments/assets/8a78432b-0ff6-442f-b24f-6ecba415317e" />
+</p>
+
 ## Dependencies:
 
 Compiletime: `GTKmm4 gtk-layer-shell`
