@@ -434,6 +434,7 @@ class Win : public Gtk::Window
             flow->set_column_spacing(20);
             flow->set_row_spacing(20);
             flow->set_margin(20);
+            flow->set_margin_start(0);
 
             scroller->set_child(*flow);
 
