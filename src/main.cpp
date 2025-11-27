@@ -81,7 +81,7 @@ void GLS_setup_layer(Gtk::Window * win, int dispIdx, const std::string& name)
     gtk_layer_init_for_window(GTK_WINDOW(win->gobj()));
     gtk_layer_set_layer(GTK_WINDOW(win->gobj()), GTK_LAYER_SHELL_LAYER_TOP);
     gtk_layer_set_namespace(GTK_WINDOW(win->gobj()), name.c_str());
-    gtk_layer_set_monitor(GTK_WINDOW(win->gobj()), GDK_MONITOR(Gdk::Display::get_default()->get_monitors()->get_object(dispIdx)->gobj()));
+    //gtk_layer_set_monitor(GTK_WINDOW(win->gobj()), GDK_MONITOR(Gdk::Display::get_default()->get_monitors()->get_object(dispIdx)->gobj()));
     gtk_layer_set_keyboard_mode(GTK_WINDOW(win->gobj()), GTK_LAYER_SHELL_KEYBOARD_MODE_ON_DEMAND);
 }
 
