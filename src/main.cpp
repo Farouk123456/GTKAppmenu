@@ -150,10 +150,10 @@ std::vector<std::filesystem::path> getDesktopFileSearchPaths()
 
     // Standard locations for desktop files
     std::vector<std::filesystem::path> searchPaths = {
-        "/usr/share/applications",
-        "/usr/local/share/applications",
         Glib::get_home_dir() + "/.local/share/applications",
         Glib::get_home_dir() + "/.local/share/flatpak/exports/share/applications",
+        "/usr/local/share/applications",
+        "/usr/share/applications",
         "/var/lib/flatpak/exports/share/applications"
     };
     
@@ -205,25 +205,24 @@ std::string cleanExecCommand(const std::string& cmd) {
 }
 
 std::string findIconPath(const std::string& iconName) {
-    // Check if it's already an absolute path
-    if (std::filesystem::exists(iconName)) {
-        return iconName;
-    }
-
-    // Try theme icons first
     try {
         auto iconTheme = Gtk::IconTheme::get_for_display(Gdk::Display::get_default());
         auto iconInfo = iconTheme->lookup_icon(iconName, 48);
-        return iconInfo->get_file()->get_path();
+        auto ret = iconInfo->get_file()->get_path();
+        if (std::filesystem::exists(ret) && ret != "" && ret[0] == '/')
+            return ret;
     } catch (...) {
         // Fallback to common paths
-        std::vector<std::string> extensions = {".png", ".svg", ".xpm"};
+        std::vector<std::string> extensions = {".png", ".svg", "-symbolic.svg" ".xpm"};
         std::vector<std::filesystem::path> searchPaths = {
             "/usr/share/pixmaps",
             "/usr/share/icons/hicolor/48x48/apps",
             "/usr/share/icons/hicolor/scalable/apps",
             "/usr/share/icons/Adwaita/48x48/apps",
-            "/usr/share/icons"
+            "/usr/share/icons",
+            "/usr/share/icons/Adwaita/symbolic/devices",
+            "/usr/share/icons/breeze-dark/actions/24",
+            "/usr/share/icons/breeze-dark/status/24"
         };
 
         for (const auto& path : searchPaths) {
@@ -231,18 +230,24 @@ std::string findIconPath(const std::string& iconName) {
             
             for (const auto& ext : extensions) {
                 std::filesystem::path iconPath = path / (iconName + ext);
-                if (std::filesystem::exists(iconPath)) {
+                if (std::filesystem::exists(iconPath) && iconPath.string() != ""  && iconPath.string()[0] == '/') {
                     return iconPath.string();
                 }
             }
         }
     }
+
+    if (std::filesystem::exists(iconName) && iconName != "" && iconName[0] == '/') {
+        return iconName;
+    }
+
+    std::cout << "Couldn't find: " << iconName << std::endl;
     return "";
 }
 
 AppEntry parseDesktopFile(const std::filesystem::path& desktopFile) {
     AppEntry entry;
-    
+    entry.desktopFile = desktopFile;
     std::ifstream file(desktopFile);
     std::string line;
     bool mainSection = false;
@@ -264,7 +269,7 @@ AppEntry parseDesktopFile(const std::filesystem::path& desktopFile) {
         size_t delim = line.find('=');
         if (delim == std::string::npos) continue;
         
-        std::string key = line.substr(0, delim);
+        std::string key = trim(line.substr(0, delim));
         std::string value = line.substr(delim + 1);
         
         if (key == "Name") {
@@ -273,6 +278,13 @@ AppEntry parseDesktopFile(const std::filesystem::path& desktopFile) {
             entry.execCmd = cleanExecCommand(value);
         } else if (key == "Icon") {
             entry.iconPath = findIconPath(value);
+            //std::cout << entry.name << " Found: " << entry.iconPath << std::endl;
+        } else if (key == "NoDisplay")
+        {
+            if (value.find("true") != std::string::npos)
+            {
+                entry.desktopFile = "";
+            }
         }
     }
     
@@ -394,7 +406,9 @@ class Win : public Gtk::Window
             auto files = findDesktopFiles();
             for (auto& file : files)
             {
-                apps.emplace_back(parseDesktopFile(file));
+                AppEntry e = parseDesktopFile(file);
+                if (e.desktopFile != "")
+                    apps.emplace_back(e);
             }
 
             std::sort(apps.begin(), apps.end());
